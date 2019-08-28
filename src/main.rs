@@ -30,6 +30,12 @@ enum Commands {
     /// last project is used to add the entry.
     Add(Add),
 
+    #[structopt(name = "rm")]
+    /// Remove a time log entry.
+    ///
+    /// Remove an entry from the log.
+    Rm(Remove),
+
     #[structopt(name = "add-project")]
     /// Add a new project to log hours on
     AddProject(AddProject),
@@ -59,6 +65,13 @@ struct Add {
     /// The name of the project to log hours on. If not provided, defaults
     /// back to the last used project.
     project: Option<String>,
+}
+
+#[derive(Debug, StructOpt)]
+struct Remove {
+    #[structopt(name="id")]
+    /// Unique id of the entry
+    id: usize,
 }
 
 #[derive(Debug, StructOpt)]
