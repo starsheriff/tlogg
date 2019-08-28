@@ -1,6 +1,6 @@
 use rusqlite::Connection;
 use std::path::Path;
-use structopt::clap::Shell;
+//use structopt::clap::Shell;
 use structopt::StructOpt;
 use xdg;
 
@@ -13,7 +13,7 @@ struct Tlogg {
     flag_verbose: bool,
 
     #[structopt(subcommand)]
-    Command: Commands,
+    command: Commands,
 }
 
 #[derive(Debug, StructOpt)]
@@ -27,8 +27,11 @@ enum Commands {
 
     #[structopt(name = "add-project")]
     /// Add a new project to log hours on
-    ///
     AddProject(AddProject),
+
+    #[structopt(name = "print")]
+    /// Export the logs.
+    Print(Print),
 }
 
 #[derive(Debug, StructOpt)]
@@ -60,6 +63,25 @@ struct AddProject {
     ///
     /// Should be short and concise.
     name: String,
+}
+
+
+#[derive(Debug, StructOpt)]
+struct Print {
+    #[structopt(subcommand)]
+    format: Format,
+    #[structopt(name = "from", long, short)]
+    from: String,
+}
+
+#[derive(Debug, StructOpt)]
+enum Format{
+    #[structopt(name = "markdown")]
+    /// Print as a human readable markdown file.
+    Markdown,
+    #[structopt(name = "csv")]
+    /// Print as machine readable csv file.
+    CSV,
 }
 
 
