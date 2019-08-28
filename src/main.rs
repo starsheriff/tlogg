@@ -40,6 +40,10 @@ enum Commands {
     /// Add a new project to log hours on
     AddProject(AddProject),
 
+    #[structopt(name = "rm-project")]
+    /// Add a new project to log hours on
+    RemoveProject(RemoveProject),
+
     #[structopt(name = "print")]
     /// Export the logs.
     Print(Print),
@@ -69,17 +73,24 @@ struct Add {
 
 #[derive(Debug, StructOpt)]
 struct Remove {
-    #[structopt(name="id")]
+    #[structopt()]
     /// Unique id of the entry
     id: usize,
 }
 
 #[derive(Debug, StructOpt)]
 struct AddProject {
-    #[structopt(name = "name", long, short)]
+    #[structopt(long, short)]
     /// Name of the new project
     ///
     /// Should be short and concise.
+    name: String,
+}
+
+#[derive(Debug, StructOpt)]
+struct RemoveProject {
+    #[structopt()]
+    /// Unique id of the entry
     name: String,
 }
 
