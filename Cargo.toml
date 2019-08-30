@@ -1,5 +1,5 @@
 [package]
-name = "tlogg"
+name = "tl"
 version = "0.1.0"
 authors = ["Johannes Weissmann <jo@starsheriff.eu>"]
 edition = "2018"
