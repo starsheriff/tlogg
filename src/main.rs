@@ -21,6 +21,7 @@ struct Tlogg {
     command: Commands,
 }
 
+
 #[derive(Debug, StructOpt)]
 enum Commands {
     #[structopt(name = "add")]
@@ -274,7 +275,7 @@ fn cmd_add_project(args: &Tlogg, add_project_args: &AddProject, conn: Connection
 
     let project = Project::from(add_project_args);
 
-    add_project(&conn, project)
+    add_project(&conn, &project)
 }
 
 pub fn add_entry(conn: &Connection, entry: TloggEntry) -> Result<()> {
@@ -283,10 +284,25 @@ pub fn add_entry(conn: &Connection, entry: TloggEntry) -> Result<()> {
     Ok(())
 }
 
-pub fn add_project(conn: &Connection, p: Project) -> Result<()> {
+pub fn add_project(conn: &Connection, p: &Project) -> Result<()> {
     let mut stmt = conn.prepare("INSERT INTO projects (name, description) VALUES (?, ?);")?;
-    stmt.execute(&[p.name, p.description])?;
+    stmt.execute(&[&p.name, &p.description])?;
     Ok(())
+}
+
+pub fn list_projects(conn: &Connection) -> Option<Vec<Project>> {
+    let mut stmt = conn.prepare("SELECT name, description FROM projects").
+        expect("could not prepare statement");
+    let projects = stmt.
+        query_map(rusqlite::NO_PARAMS, |row| Ok(Project{
+            name: row.get(0)?,
+            description: row.get(1)?,
+        })).expect("somethings wrong").
+    map(|x| x.unwrap()).collect();
+
+    println!("{:?}", projects);
+
+    Some(projects)
 }
 
 
@@ -306,16 +322,17 @@ mod test {
             }
         }
 
-        fn migrate(self) -> TestCase {
+        fn migrate(self) -> Self {
             migrate(&self.db).expect("could not migrate");
             self
         }
 
-        fn when_add_project(self, name: &str) -> TestCase {
-            add_project(&self.db, Project{
-                name: name.to_string(),
-                description: String::new(),
-            }).expect("could not add project");
+        fn when_add_project(self, p: &Project) -> Self {
+            add_project(&self.db, p).expect("could not add project"); self
+        }
+
+        fn when_list_projects(self) -> Self {
+            list_projects(&self.db);
             self
         }
 
@@ -325,9 +342,23 @@ mod test {
     fn test_create_bucket() {
         TestCase::new().
             migrate().
-            when_add_project("a project");
+            when_add_project(&Project{
+                name: "testproject".to_string(),
+                description: "just testing".to_string(),
+            });
             //when_add_bucket("myBucket").
             //then_bucket_exists("myBucket");
+    }
+
+    #[test]
+    fn test_list_projects() {
+        TestCase::new().
+            migrate().
+            when_add_project(&Project{
+                name: "testproject".to_string(),
+                description: "just testing".to_string(),
+            }).
+            when_list_projects();
     }
 
 }
