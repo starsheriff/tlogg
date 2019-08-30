@@ -21,7 +21,6 @@ struct Tlogg {
     command: Commands,
 }
 
-
 #[derive(Debug, StructOpt)]
 enum Commands {
     #[structopt(name = "add")]
@@ -48,6 +47,18 @@ enum Commands {
     #[structopt(name = "print")]
     /// Export the logs.
     Print(Print),
+
+    #[structopt(name = "ls")]
+    /// Print
+    List(List)
+}
+
+#[derive(Debug, StructOpt)]
+struct List {
+    #[structopt(name="projects", long, short)]
+    /// 
+    ///
+    flag_project: bool,
 }
 
 #[derive(Debug, StructOpt)]
@@ -251,6 +262,9 @@ fn commands(args: Tlogg, conn: rusqlite::Connection) -> Result<()> {
         Commands::AddProject(add_project_args) => {
             cmd_add_project(&args, &add_project_args, conn)
         },
+        Commands::List(list_args) => {
+            cmd_list(&args, &list_args, conn)
+        },
         _ => {
             panic!("not implemented");
         },
@@ -278,6 +292,24 @@ fn cmd_add_project(args: &Tlogg, add_project_args: &AddProject, conn: Connection
     add_project(&conn, &project)
 }
 
+fn cmd_list(args: &Tlogg, list_args: &List, conn: Connection) -> Result<()> {
+    if args.flag_verbose {
+        println!("called command ls")
+    }
+
+    if list_args.flag_project {
+        let projects = list_projects(&conn);
+
+        match projects {
+            Some(ps) => println!("{:?}", ps),
+            None => println!("nothing to show"),
+        }
+    }
+
+    Ok(())
+}
+
+
 pub fn add_entry(conn: &Connection, entry: TloggEntry) -> Result<()> {
     let mut stmt = conn.prepare("INSERT INTO log_entries (description, hours, project) VALUES (?,?,?);")?;
     stmt.execute(params![entry.message, entry.duration, entry.project])?;
@@ -299,8 +331,6 @@ pub fn list_projects(conn: &Connection) -> Option<Vec<Project>> {
             description: row.get(1)?,
         })).expect("somethings wrong").
     map(|x| x.unwrap()).collect();
-
-    println!("{:?}", projects);
 
     Some(projects)
 }
