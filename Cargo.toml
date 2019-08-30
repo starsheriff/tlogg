@@ -9,4 +9,4 @@ edition = "2018"
 [dependencies]
 structopt = "0.2.18"
 xdg = "^2.1"
-rusqlite = "0.16.0"
+rusqlite = "0.20.0"
