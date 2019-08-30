@@ -288,3 +288,46 @@ pub fn add_project(conn: &Connection, p: Project) -> Result<()> {
     stmt.execute(&[p.name, p.description])?;
     Ok(())
 }
+
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    struct TestCase {
+        db: Connection,
+    }
+
+    impl TestCase {
+        fn new() -> TestCase {
+            TestCase{
+                db: new_connection(Path::new(":memory:")).expect("could not open db"),
+            }
+        }
+
+        fn migrate(self) -> TestCase {
+            migrate(&self.db).expect("could not migrate");
+            self
+        }
+
+        fn when_add_project(self, name: &str) -> TestCase {
+            add_project(&self.db, Project{
+                name: name.to_string(),
+                description: String::new(),
+            }).expect("could not add project");
+            self
+        }
+
+    }
+
+    #[test]
+    fn test_create_bucket() {
+        TestCase::new().
+            migrate().
+            when_add_project("a project");
+            //when_add_bucket("myBucket").
+            //then_bucket_exists("myBucket");
+    }
+
+}
