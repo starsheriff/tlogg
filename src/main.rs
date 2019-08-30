@@ -1,4 +1,4 @@
-use rusqlite::Connection;
+use rusqlite::{params, Connection, Result};
 use std::path::Path;
 //use structopt::clap::Shell;
 use structopt::StructOpt;
@@ -85,6 +85,10 @@ struct AddProject {
     ///
     /// Should be short and concise.
     name: String,
+
+    #[structopt(long, short)]
+    /// Description of the new project
+    description: String,
 }
 
 #[derive(Debug, StructOpt)]
@@ -119,12 +123,53 @@ enum Format{
 ///
 /// The connection is properly initialized and all pragmas, e.g. `foreign_keys`,
 /// are set.
-pub fn new_connection(p: &Path) -> Result<Connection, rusqlite::Error> {
+pub fn new_connection(p: &Path) -> Result<Connection> {
     let conn = Connection::open(p)?;
     // foreign key support must be explicitely enabled _per connection_
     conn.execute("PRAGMA foreign_keys = ON", rusqlite::NO_PARAMS)?;
 
     Ok(conn)
+}
+
+#[derive(Debug)]
+pub struct Project {
+    name: String,
+    description: String,
+}
+
+impl From<&AddProject> for Project {
+    fn from(args: &AddProject) -> Project {
+        Project{
+            name: args.name.clone(),
+            description: args.description.clone(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct TloggEntry {
+    id: Option<usize>,
+    duration: f64,
+    message: String,
+    project: String,
+}
+
+impl From<&Add> for TloggEntry {
+
+    fn from(add_args: &Add) -> TloggEntry {
+        let project = match &add_args.project {
+            Some(projectName) => projectName.clone(),
+            None => String::new(),
+        };
+
+        TloggEntry{
+            id: None,
+            duration: add_args.hours,
+            message: add_args.description.clone(),
+            project,
+        }
+    }
+
 }
 
 
@@ -156,7 +201,7 @@ pub fn migrate(conn: &Connection) -> rusqlite::Result<usize> {
     }
     // if new migrations are required they have to be added here
 
-    return Ok(DB_VERSION)
+    Ok(DB_VERSION)
 }
 
 fn main() {
@@ -193,19 +238,53 @@ fn main() {
     }
 
     // run commands
-    commands(args, conn)
+    commands(args, conn).unwrap();
 }
 
 
-fn commands(args: Tlogg, conn: rusqlite::Connection) {
-    match args.command {
+fn commands(args: Tlogg, conn: rusqlite::Connection) -> Result<()> {
+    match &args.command {
         Commands::Add(add_args) => {
-            println!("{:?}", add_args);
-            panic!("not implemented");
+            cmd_add(&args, &add_args, conn)
+        },
+        Commands::AddProject(add_project_args) => {
+            cmd_add_project(&args, &add_project_args, conn)
         },
         _ => {
             panic!("not implemented");
         },
 
     }
+}
+
+fn cmd_add(args: &Tlogg, add_args: &Add, conn: rusqlite::Connection) -> Result<()>{
+    if args.flag_verbose {
+        println!("called command add");
+    }
+
+    let entry = TloggEntry::from(add_args);
+
+    add_entry(&conn,  entry)
+}
+
+fn cmd_add_project(args: &Tlogg, add_project_args: &AddProject, conn: Connection) -> Result<()> {
+    if args.flag_verbose {
+        println!("called command add-project")
+    }
+
+    let project = Project::from(add_project_args);
+
+    add_project(&conn, project)
+}
+
+pub fn add_entry(conn: &Connection, entry: TloggEntry) -> Result<()> {
+    let mut stmt = conn.prepare("INSERT INTO log_entries (description, hours, project) VALUES (?,?,?);")?;
+    stmt.execute(params![entry.message, entry.duration, entry.project])?;
+    Ok(())
+}
+
+pub fn add_project(conn: &Connection, p: Project) -> Result<()> {
+    let mut stmt = conn.prepare("INSERT INTO projects (name, description) VALUES (?, ?);")?;
+    stmt.execute(&[p.name, p.description])?;
+    Ok(())
 }
