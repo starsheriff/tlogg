@@ -41,7 +41,13 @@ enum Commands {
     AddProject(AddProject),
 
     #[structopt(name = "rm-project")]
-    /// Add a new project to log hours on
+    /// Remove a project
+    ///
+    /// [not yet implemented]
+    ///
+    /// Removes a project. By default only a soft remove. No data is actually
+    /// deleted. To actually delete the project and all related logs, the `-f`
+    /// option has to be provided.
     RemoveProject(RemoveProject),
 
     #[structopt(name = "print")]
@@ -55,32 +61,37 @@ enum Commands {
 
 #[derive(Debug, StructOpt)]
 struct List {
-    #[structopt(name="projects", long, short)]
-    /// 
+    #[structopt(name="projects", long)]
+    ///
     ///
     flag_project: bool,
+
+    #[structopt(name="project", short, long)]
+    ///
+    ///
+    project: Option<String>,
 }
 
 #[derive(Debug, StructOpt)]
 struct Add {
-    #[structopt(short = "d", long = "duration")]
+    #[structopt(name="project")]
+    /// Name of the project to log the hours.
+    ///
+    /// The name of the project to log hours on. If not provided, defaults
+    /// back to the last used project.
+    project: String,
+
+    #[structopt(name="hours")]
     /// Number of hours spent
     ///
     /// The number of hours spent on the current entry.
     hours: f64,
 
-    #[structopt(short = "m", long = "message")]
+    #[structopt(name="description")]
     /// Description of the task for the current entry.
     ///
     /// Should be kept short. Preferrably less than 70 characters.
     description: String,
-
-    #[structopt(short = "p", long = "project")]
-    /// Name of the project to log the hours.
-    ///
-    /// The name of the project to log hours on. If not provided, defaults
-    /// back to the last used project.
-    project: Option<String>,
 }
 
 #[derive(Debug, StructOpt)]
@@ -169,21 +180,15 @@ pub struct TloggEntry {
 impl From<&Add> for TloggEntry {
 
     fn from(add_args: &Add) -> TloggEntry {
-        let project = match &add_args.project {
-            Some(projectName) => projectName.clone(),
-            None => String::new(),
-        };
-
         TloggEntry{
             id: None,
             duration: add_args.hours,
             message: add_args.description.clone(),
-            project,
+            project: add_args.project.clone(),
         }
     }
 
 }
-
 
 pub fn user_version(conn: &Connection) -> rusqlite::Result<usize> {
     let x: rusqlite::Result<i64> =
@@ -301,9 +306,13 @@ fn cmd_list(args: &Tlogg, list_args: &List, conn: Connection) -> Result<()> {
         let projects = list_projects(&conn);
 
         match projects {
-            Some(ps) => println!("{:?}", ps),
+            Some(ps) => {
+                println!("{:?}", ps)
+            },
             None => println!("nothing to show"),
         }
+    } else {
+
     }
 
     Ok(())
